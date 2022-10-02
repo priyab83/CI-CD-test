@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+	
+	  tools
+    {
+       maven "Maven"
+    }
+ stages {
+      stage('checkout') {
+           steps {
+             
+                git branch: 'master', url: '<git url>'
+             
+          }
+        }
+	 stage('Execute Maven') {
+           steps {
+             
+                sh 'mvn package'             
+          }
+        }
+        
+
+  stage('Docker Build and Tag') {
+           steps {
+              
+                sh 'docker build -t samplewebapp:latest .' 
+                sh 'docker tag samplewebapp priyabrata/samplewebapp:latest'
+                //sh 'docker tag samplewebapp priyabrata/samplewebapp:$BUILD_NUMBER'
+               
+          }
+        }
+     
+  stage('Publish image to artifactory') {
+          
+            steps {
+        withDockerRegistry([ credentialsId: "artifactory", url: "" ]) {
+          sh  'docker push priyabrata/samplewebapp:latest'
+        //  sh  'docker push priyabrata/samplewebapp:$BUILD_NUMBER' 
+        }
+                  
+          }
+        }
+     
+      stage('Run Docker container on Jenkins Agent') {
+             
+            steps 
+			{
+                sh "docker run -d -p 8003:8080 priyabrata/samplewebapp"
+ 
+            }
+        }
+ stage('Run Docker container on remote hosts') {
+             
+            steps {
+                sh "docker -H ssh://jenkins@<ip address of the remote host> run -d -p 8003:8080 priyabrata/samplewebapp"
+ 
+            }
+        }
+    }
+	}
+    
